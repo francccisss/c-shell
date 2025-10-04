@@ -66,6 +66,7 @@ char *parse_string(char delimiter, FILE *file_ptr) {
 
   size_t line_capp = 0;
   int line_count = 0;
+  int size_by = 1; // increment to multiply by current size
   char *file_buf = NULL;
   char *ptr_str_tmp = (char *)malloc(sizeof(char) * BUFFER_SIZE);
   // dynamically reallocate for every new line
@@ -73,14 +74,29 @@ char *parse_string(char delimiter, FILE *file_ptr) {
     if (*file_buf == '\n')
       continue;
     printf("[ DATA ]: %s\n", file_buf);
-    char *p = (ptr_str_tmp + (sizeof(char) * BUFFER_SIZE * line_count)); // access
-    strcpy(p, file_buf);
 
-    printf("[ DATA ]: from ptr %s\n", p);
+    int cur_str_size = strlen(file_buf);
+    printf("[ TEST ]: BUF LEN %d\n", cur_str_size);
+
+    for (int i = 0; i < cur_str_size; i++) {
+      *(ptr_str_tmp + sizeof(char) * (BUFFER_SIZE * line_count + i)) =
+          file_buf[i];
+    }
+    char *p =
+        (ptr_str_tmp + sizeof(char) * (BUFFER_SIZE * line_count)); // access
+
+    printf("[ FROM PTR DATA ]: %s\n", p);
+    printf("[ TEST ]: STR LEN %lu\n", strlen(p));
+
     line_count++;
-    // add n times more memory size for every line
-    char *tmp =
-        (char *)realloc(ptr_str_tmp, sizeof(char) * BUFFER_SIZE * line_count);
+    size_by++;
+
+    // add n times more memory size for every new line that has contents
+    char *tmp = (char *)realloc(
+        ptr_str_tmp,
+        sizeof(char) * BUFFER_SIZE *
+            size_by); // need to add since line_count starts at 0
+
     if (tmp == NULL) {
       perror("[ ERROR ]: Unable to reallocate new memory for buffer");
       exit(1);
