@@ -13,11 +13,11 @@
 int current_buff_sz(char *buf);
 int buffer_whitespace_count(char *buf);
 char *string_tokenizer(char *buf);
-char *parse_string(char delimiter, FILE *file_ptr);
+char *read_file(FILE *file_ptr);
 
 int main() {
   printf("starting git-tui\n");
-  char buffer[BUFFER_SIZE];
+  char input_buffer[BUFFER_SIZE];
   char bin_cmd[] = "gago\n";
 
   // check if file exists
@@ -29,40 +29,45 @@ int main() {
     return 1;
   }
 
-  parse_string(':', zdrc);
+  char *file_buffer = read_file(zdrc);
 
-  return 0;
-
-  // fgets includes newline '\n'
   printf("~>");
 
-  while (fgets(buffer, BUFFER_SIZE, stdin) != NULL) {
-    printf("[ TEST ]: Size of buffer = %d\n", current_buff_sz(buffer));
-    printf("[ TEST ]: Whitespace count=%d\n", buffer_whitespace_count(buffer));
-    if (buffer_whitespace_count(buffer) > MAX_INPUTS) {
+  while (fgets(input_buffer, BUFFER_SIZE, stdin) != NULL) {
+    printf("[ TEST ]: Size of buffer = %d\n", current_buff_sz(input_buffer));
+    printf("[ TEST ]: Whitespace count=%d\n", buffer_whitespace_count(input_buffer));
+    if (buffer_whitespace_count(input_buffer) > MAX_INPUTS) {
       printf("[ WARNING ]: Input size exceed max user inputs of %d",
              MAX_INPUTS);
       return 1;
     }
-    char *str_arr = string_tokenizer(buffer);
+    char *str_arr = string_tokenizer(input_buffer);
     if (str_arr == NULL) {
       printf("[ ERROR ]: Pointer returned null");
       free(str_arr);
       exit(1);
     };
-    int res = strcmp(buffer, bin_cmd);
+    int res = strcmp(input_buffer, bin_cmd);
     if (res == 0) {
       printf("[ INFO ]: Executed command\n");
     } else {
       printf("[ INFO ]: Command does not exist, check your $PATH\n");
     }
-    printf("[ INFO ]: Current size of buffer=%lu\n", strlen(buffer));
+    printf("[ INFO ]: Current size of buffer=%lu\n", strlen(input_buffer));
     printf("~>");
     free(str_arr);
   };
 }
 
-char *parse_string(char delimiter, FILE *file_ptr) {
+/*
+ Parsing a file that is read line by line to extract config from .zdrc
+ when reading the returned array of strings must offset by BUFFER_SIZE
+
+- return: a pointer to a character which should be accessed by (BUFFER_SIZE *
+index) to get each string in the array.
+
+ */
+char *read_file(FILE *file_ptr) {
 
   size_t line_capp = 0;
   int line_count = 0;
@@ -104,9 +109,9 @@ char *parse_string(char delimiter, FILE *file_ptr) {
     ptr_str_tmp = tmp;
   };
   printf("[ TEST ]: LINE COUNT: %d\n", line_count);
-
-  printf("[ INFO ]: FILE CONTENTS \n%s", ptr_str_tmp);
-
+  for (int i = 0; i < 3; i++) {
+    printf("[ INFO ]: FILE CONTENTS [%i] \n%s", i,(ptr_str_tmp + i * BUFFER_SIZE));
+  }
   return ptr_str_tmp;
 }
 
@@ -136,6 +141,8 @@ int buffer_whitespace_count(char *buf) {
   return counter;
 }
 
+// Reads the whole buffer input of the user
+// accessing each input needs to be offset by BUFFER_SIZE
 char *string_tokenizer(char *buf) {
 
   char *ptr = buf;
