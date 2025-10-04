@@ -140,13 +140,20 @@ char *read_file(FILE *file_ptr, size_t *size) {
   while (getline(&file_buf, &line_capp, file_ptr) != EOF) {
     if (*file_buf == '\n')
       continue;
+    // printf("[ DATA ]: %s\n", file_buf);
+    //
     int cur_str_size = strlen(file_buf);
+    printf("[ TEST ]: BUF LEN %d\n", cur_str_size);
+
     for (int i = 0; i < cur_str_size; i++) {
       *(ptr_str_tmp + sizeof(char) * (BUFFER_SIZE * line_count + i)) =
           file_buf[i];
     }
     char *p =
         (ptr_str_tmp + sizeof(char) * (BUFFER_SIZE * line_count)); // access
+
+    printf("[ FROM PTR DATA ]: %s\n", p);
+    printf("[ TEST ]: STR LEN %lu\n", strlen(p));
 
     line_count++;
     size_by++;
@@ -200,7 +207,7 @@ char *string_tokenizer(char *buf) {
   // starting of new string_tokenizering separated by space is base
   size_t base = 0;
 
-  printf("[ INFO ]: incoming string=%s\n", buf);
+  printf("[ INFO ]: incoming string=%s", buf);
   for (int i = 0; i < strlen(buf); i++) {
     if (buf[i] == ' ' || buf[i] == '\n' || buf[i] == '\0') {
 
