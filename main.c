@@ -12,10 +12,10 @@
 
 int buffer_whitespace_count(char *buf);
 char *string_tokenizer(char *buf);
-
+char *read_delimiter(char delimiter, char *buf);
 // index is used to keep track of the size of the allocated memory for the file
 // buffer
-char *read_file(FILE *file_ptr, size_t *index);
+char *read_file(FILE *file_ptr, size_t *size);
 
 int main() {
   printf("starting git-tui\n");
@@ -31,17 +31,16 @@ int main() {
     return 1;
   }
 
-  size_t index = 0;
-  char *file_buffer = read_file(zdrc, &index);
+  size_t size = 0;
+  char *file_buffer = read_file(zdrc, &size);
 
-  printf("[ TEST ]: size of file buffer=%lu ",
-         sizeof(char) * index * BUFFER_SIZE);
+  printf("[ TEST ]: size of file buffer=%lu ", size);
 
   // sizechar for making sure that it should be size of char when counting
-	// TODO: create enum if want to extend the config file... idk
-  for (int i = 0; i < (sizeof(char) * index * BUFFER_SIZE); i++) {
+  // TODO: create enum if want to extend the config file... idk
+  for (int i = 0; i < (sizeof(char) * size * BUFFER_SIZE); i++) {
     char *current_str = (file_buffer + BUFFER_SIZE * i);
-    int cmp_result = strncmp(current_str, "PATH",4);
+    int cmp_result = strncmp(current_str, "PATH", 4);
     if (cmp_result == 0) {
       printf("[ INFO ]: PATH exists %s\n", current_str);
       return 0;
@@ -78,6 +77,8 @@ int main() {
   };
 }
 
+char *read_delimiter(char delimiter, char *buf) { return NULL; }
+
 /*
  Parsing a file that is read line by line to extract config from .zdrc
  when reading the returned array of strings must offset by BUFFER_SIZE
@@ -86,7 +87,7 @@ int main() {
 index) to get each string in the array.
 
  */
-char *read_file(FILE *file_ptr, size_t *index) {
+char *read_file(FILE *file_ptr, size_t *size) {
 
   size_t line_capp = 0;
   int line_count = 0;
@@ -125,15 +126,15 @@ char *read_file(FILE *file_ptr, size_t *index) {
       perror("[ ERROR ]: Unable to reallocate new memory for buffer");
       exit(1);
     }
-    *index = line_count;
     ptr_str_tmp = tmp;
   };
+  *size += line_count * BUFFER_SIZE * sizeof(char);
   printf("[ TEST ]: LINE COUNT: %d\n", line_count);
   for (int i = 0; i < line_count; i++) {
     printf("[ INFO ]: FILE CONTENTS [%i] \n%s", i,
            (ptr_str_tmp + i * BUFFER_SIZE));
   }
-	free(file_buf);
+  free(file_buf);
   return ptr_str_tmp;
 }
 int buffer_whitespace_count(char *buf) {
