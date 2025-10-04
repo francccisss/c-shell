@@ -10,10 +10,12 @@
 #define MAX_INPUTS 20 // determined by white spaces from user query
 #define RC_FILE_PATH ".zdrc"
 
-int current_buff_sz(char *buf);
 int buffer_whitespace_count(char *buf);
 char *string_tokenizer(char *buf);
-char *read_file(FILE *file_ptr);
+
+// index is used to keep track of the size of the allocated memory for the file
+// buffer
+char *read_file(FILE *file_ptr, size_t *index);
 
 int main() {
   printf("starting git-tui\n");
@@ -29,13 +31,29 @@ int main() {
     return 1;
   }
 
-  char *file_buffer = read_file(zdrc);
+  size_t index = 0;
+  char *file_buffer = read_file(zdrc, &index);
 
+  printf("[ TEST ]: size of file buffer=%lu ",
+         sizeof(char) * index * BUFFER_SIZE);
+
+  // sizechar for making sure that it should be size of char when counting
+  for (int i = 0; i < (sizeof(char) * index * BUFFER_SIZE); i++) {
+    char *current_str = (file_buffer + BUFFER_SIZE * i);
+    int cmp_result = strncmp(current_str, "PATH",4);
+    if (cmp_result == 0) {
+      printf("[ INFO ]: PATH exists %s\n", current_str);
+      return 0;
+    }
+  }
+  printf("[ ERROR ]: PATH does not exists");
+  return 1;
   printf("~>");
 
   while (fgets(input_buffer, BUFFER_SIZE, stdin) != NULL) {
-    printf("[ TEST ]: Size of buffer = %d\n", current_buff_sz(input_buffer));
-    printf("[ TEST ]: Whitespace count=%d\n", buffer_whitespace_count(input_buffer));
+    printf("[ TEST ]: Size of buffer = %lu\n", strlen(input_buffer));
+    printf("[ TEST ]: Whitespace count=%d\n",
+           buffer_whitespace_count(input_buffer));
     if (buffer_whitespace_count(input_buffer) > MAX_INPUTS) {
       printf("[ WARNING ]: Input size exceed max user inputs of %d",
              MAX_INPUTS);
@@ -67,7 +85,7 @@ int main() {
 index) to get each string in the array.
 
  */
-char *read_file(FILE *file_ptr) {
+char *read_file(FILE *file_ptr, size_t *index) {
 
   size_t line_capp = 0;
   int line_count = 0;
@@ -78,8 +96,8 @@ char *read_file(FILE *file_ptr) {
   while (getline(&file_buf, &line_capp, file_ptr) != EOF) {
     if (*file_buf == '\n')
       continue;
-    printf("[ DATA ]: %s\n", file_buf);
-
+    // printf("[ DATA ]: %s\n", file_buf);
+    //
     int cur_str_size = strlen(file_buf);
     printf("[ TEST ]: BUF LEN %d\n", cur_str_size);
 
@@ -106,27 +124,16 @@ char *read_file(FILE *file_ptr) {
       perror("[ ERROR ]: Unable to reallocate new memory for buffer");
       exit(1);
     }
+    *index = line_count;
     ptr_str_tmp = tmp;
   };
   printf("[ TEST ]: LINE COUNT: %d\n", line_count);
-  for (int i = 0; i < 3; i++) {
-    printf("[ INFO ]: FILE CONTENTS [%i] \n%s", i,(ptr_str_tmp + i * BUFFER_SIZE));
+  for (int i = 0; i < line_count; i++) {
+    printf("[ INFO ]: FILE CONTENTS [%i] \n%s", i,
+           (ptr_str_tmp + i * BUFFER_SIZE));
   }
   return ptr_str_tmp;
 }
-
-int current_buff_sz(char *buf) {
-
-  int counter = 0;
-  for (int i = counter; i < BUFFER_SIZE; i++) {
-    if (buf[i] == 0) {
-      break;
-    }
-    counter++;
-  }
-  return counter;
-}
-
 int buffer_whitespace_count(char *buf) {
   int counter = 0;
 
@@ -156,7 +163,7 @@ char *string_tokenizer(char *buf) {
   size_t base = 0;
 
   printf("[ TEST ]: incoming string=%s", buf);
-  for (int i = 0; i < current_buff_sz(buf); i++) {
+  for (int i = 0; i < strlen(buf); i++) {
     if (buf[i] == ' ' || buf[i] == '\n' || buf[i] == '\0') {
 
       // iterate up to i where i is a runner pointer of the buf string
