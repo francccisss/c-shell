@@ -38,6 +38,7 @@ int main() {
          sizeof(char) * index * BUFFER_SIZE);
 
   // sizechar for making sure that it should be size of char when counting
+	// TODO: create enum if want to extend the config file... idk
   for (int i = 0; i < (sizeof(char) * index * BUFFER_SIZE); i++) {
     char *current_str = (file_buffer + BUFFER_SIZE * i);
     int cmp_result = strncmp(current_str, "PATH",4);
@@ -132,6 +133,7 @@ char *read_file(FILE *file_ptr, size_t *index) {
     printf("[ INFO ]: FILE CONTENTS [%i] \n%s", i,
            (ptr_str_tmp + i * BUFFER_SIZE));
   }
+	free(file_buf);
   return ptr_str_tmp;
 }
 int buffer_whitespace_count(char *buf) {
