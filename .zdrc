@@ -1,0 +1,4 @@
+PATH=/Users/francois/.nvm/versions/node/v24.5.0/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/usr/local/go/bin:/Users/francois/.cargo/bin:/Applications/Ghostty.app/Contents/MacOS:/Users/francois/.docker/bin:/Users/francois/Library/Python/3.9/bin
+
+
+USER=francois
