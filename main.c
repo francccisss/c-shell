@@ -10,9 +10,18 @@
 #define MAX_INPUTS 20 // determined by white spaces from user query
 #define RC_FILE_PATH ".zdrc"
 
+
+typedef struct {
+
+	char *data;
+	char **str;
+	size_t str_len;
+
+} String;
+
 int buffer_whitespace_count(char *buf);
 char *string_tokenizer(char *buf);
-char *read_bin_path(char delimiter, char *path_buf);
+char *read_bin_path(char delimiter, char *path_buf, size_t *size);
 // index is used to keep track of the size of the allocated memory for the file
 // buffer
 char *read_file(FILE *file_ptr, size_t *size);
@@ -30,19 +39,21 @@ int main() {
     return 1;
   }
 
-  size_t buf_size = 0;
-  char *file_buf = read_file(zdrc, &buf_size);
-  char *paths_buf = read_bin_path(':', file_buf);
+  size_t file_buf_size = 0;
+  char *file_buf = read_file(zdrc, &file_buf_size);
 
-  printf("[ TEST ]: size of file buffer=%lu\n", buf_size);
+  size_t paths_buf_size = 0;
+  char *paths_buf = read_bin_path(':', file_buf, &paths_buf_size);
+
+  printf("[ TEST ]: size of file buffer=%lu\n", file_buf_size);
 
   // TODO: create enum if want to extend the config file... idk
 
-  for (int i = 0; i < buf_size; i++) {
+  for (int i = 0; i < file_buf_size; i++) {
     char *current_str = (file_buf + BUFFER_SIZE * i);
     int cmp_result = strncmp(current_str, "PATH", 4);
     if (cmp_result == 0) {
-      printf("[ INFO ]: PATH exists %s\n", current_str);
+      printf("[ INFO ]: PATH exists\n");
       return 0;
     }
   }
@@ -83,7 +94,7 @@ int main() {
 
 // - return: a pointer to a character which should be accessed by (BUFFER_SIZE *
 // index) to get each string in the array.
-char *read_bin_path(char delimiter, char *path_buf) {
+char *read_bin_path(char delimiter, char *path_buf, size_t *size) {
 
   char *paths = (char *)malloc(sizeof(char) * BUFFER_SIZE);
   if (paths == NULL) {
@@ -91,14 +102,13 @@ char *read_bin_path(char delimiter, char *path_buf) {
     exit(1);
   }
   int base = 0;
-  int variable_length_size = BUFFER_SIZE;
-  for (int i = 5; i < variable_length_size; i++) {
+  int size_by = 1;
+  int line_count = 0;
+  for (int i = 5; i < BUFFER_SIZE; i++) {
     char *current_ch = (path_buf + sizeof(char) * i);
     if (*current_ch == delimiter || *current_ch == '\n') {
 
-      // variable length allocation
-      variable_length_size += i - base;
-      char *tmp_realloc = (char *)realloc(paths, variable_length_size);
+      char *tmp_realloc = (char *)realloc(paths, BUFFER_SIZE * size_by);
 
       if (tmp_realloc == NULL) {
         perror("[ ERROR ]: Unable to reallocate new memory for buffer");
@@ -106,7 +116,7 @@ char *read_bin_path(char delimiter, char *path_buf) {
         exit(1);
       }
 
-      path_buf = tmp_realloc;
+      paths = tmp_realloc;
 
       int index = sizeof(char) * i; // no need to miltiply over and over again
       for (int j = base; j < i; j++) {
@@ -115,9 +125,11 @@ char *read_bin_path(char delimiter, char *path_buf) {
 
       *(paths + index + i) = '\0'; // replace ':' with '\0'
       base = i;
+      line_count++;
     }
   }
 
+  *size += line_count * BUFFER_SIZE * sizeof(char);
   return paths;
 }
 
