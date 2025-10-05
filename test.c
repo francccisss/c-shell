@@ -25,8 +25,7 @@ int main() {
     printf("[ TEST ]: String[%d]=%s\n", i, tokenized_input->data[i]);
   }
 
-
-		free(tokenized_input->data);
+  free(tokenized_input->data);
   free(tokenized_input);
 
   return 0;

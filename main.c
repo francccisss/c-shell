@@ -1,9 +1,7 @@
-#include "stdlib.h"
-#include <stddef.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 #define BUFFER_SIZE 1024
@@ -30,18 +28,20 @@ void substring(char *src, char *dest, size_t start, size_t end) {
     exit(1);
   }
   int str_size = end - start;
-  for (int i = start; i <= strlen(src); i++) {
-    if (i != end) {
-      // start = 3
-      // if j = 0 : start = start + 0 = 3
-      // if j = 1 : start = start + 1 = 4
-      // if j = 2 : start = start + 2 = 5
-      // if j = 3 : start = start + 3 = 6
-      // until end
-      dest[i] = src[start + i];
-      continue;
+  // this somehow works than previous iteration
+  for (int i = 0; i <= strlen(src); i++) {
+    if (i == start) {
+      for (int j = 0; j <= end; j++) {
+        // start = 3
+        // if j = 0 : start = start + 0 = 3
+        // if j = 1 : start = start + 1 = 4
+        // if j = 2 : start = start + 2 = 5
+        // if j = 3 : start = start + 3 = 6
+        // until end
+        dest[j] = src[start + j];
+      }
+      break;
     }
-    break;
   }
 
   printf("[ TEST ]: DEST LEN =%lu\n", strlen(dest));
@@ -80,12 +80,17 @@ int main() {
     if (cmp_result == 0) {
       printf("[ INFO ]: PATH exists\n");
       char path_buf[BUFFER_SIZE];
+
+      // TODO: fix bug where first few characters are gobbly guk
       substring(cur_str, path_buf, line_name_len, strlen(cur_str));
-      printf("[ INFO ]: PATH CONTENTS \n%s", path_buf);
+
       TokenizedString *tokenized_paths = string_tokenizer_delim(':', path_buf);
-      printf("[ TEST ]: %s", tokenized_paths->data[1]);
+      printf("[ TEST ]: %s", tokenized_paths->data[0]);
+      free(tokenized_paths->data);
+      free(tokenized_paths);
     }
   }
+
   free(tokenized_file_buf->data);
   free(tokenized_file_buf);
   return 0;
