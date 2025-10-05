@@ -17,10 +17,36 @@ typedef struct {
 } TokenizedString;
 
 int buffer_whitespace_count(char *buf);
-char substring(char *buf);
+void substring(char *src, char *dest, size_t start, size_t end);
 TokenizedString *string_tokenizer(char *buf);
 TokenizedString *string_tokenizer_delim(char delimiter, char *path_buf);
 TokenizedString *tokenized_file(FILE *file_ptr);
+
+void substring(char *src, char *dest, size_t start, size_t end) {
+
+  if (end > strlen(src)) {
+    printf("[ ERROR ]: character overflow from end=%lu, src length=%lu\n", end,
+           strlen(src));
+    exit(1);
+  }
+  int str_size = end - start;
+  for (int i = start; i <= strlen(src); i++) {
+    if (i != end) {
+      // start = 3
+      // if j = 0 : start = start + 0 = 3
+      // if j = 1 : start = start + 1 = 4
+      // if j = 2 : start = start + 2 = 5
+      // if j = 3 : start = start + 3 = 6
+      // until end
+      dest[i] = src[start + i];
+      continue;
+    }
+    break;
+  }
+
+  printf("[ TEST ]: DEST LEN =%lu\n", strlen(dest));
+  printf("[ TEST ]: SRC LEN =%lu\n", strlen(src));
+}
 
 int main() {
   printf("starting git-tui\n");
@@ -42,16 +68,22 @@ int main() {
     printf("[ INFO ]: FILE CONTENTS [%d] \n%s", i, tokenized_file_buf->data[i]);
   }
 
-  printf("[ TEST ]: size of file buffer=%lu\n", tokenized_file_buf->len);
-  // // TODO: create enum if want to extend the config file... idk
+  printf("[ TEST ]: lines in file =%lu\n", tokenized_file_buf->len);
+  // TODO: create enum if want to extend the config file... idk
+
   for (int i = 0; i < tokenized_file_buf->len; i++) {
-    char *paths = tokenized_file_buf->data[i];
-    int cmp_result = strncmp(paths, "PATH=", 5);
+
+    char *cur_str = tokenized_file_buf->data[i];
+    size_t line_name_len = 5;
+    int cmp_result = strncmp(cur_str, "PATH=", line_name_len);
+
     if (cmp_result == 0) {
       printf("[ INFO ]: PATH exists\n");
-      printf("[ INFO ]: PATH CONTENTS \n%s", paths);
-      TokenizedString *tokenized_paths = string_tokenizer_delim(':', paths);
-      return 0;
+      char path_buf[BUFFER_SIZE];
+      substring(cur_str, path_buf, line_name_len, strlen(cur_str));
+      printf("[ INFO ]: PATH CONTENTS \n%s", path_buf);
+      TokenizedString *tokenized_paths = string_tokenizer_delim(':', path_buf);
+      printf("[ TEST ]: %s", tokenized_paths->data[1]);
     }
   }
   free(tokenized_file_buf->data);
@@ -98,9 +130,11 @@ int main() {
 // index) to get each string in the array.
 TokenizedString *string_tokenizer_delim(char delimiter, char *buf) {
 
+  printf("\nCALLED\n");
   TokenizedString *tokenized_str = malloc(sizeof(TokenizedString));
   if (tokenized_str == NULL) {
-    return NULL;
+    perror("[ ERROR ]: Unable to allocate memory for tokenized_str");
+    exit(1);
   }
 
   size_t current_str_pos = 0;
@@ -108,7 +142,7 @@ TokenizedString *string_tokenizer_delim(char delimiter, char *buf) {
   size_t size_by = 1;
   char (*set_ptr)[BUFFER_SIZE] = malloc(sizeof(*set_ptr));
 
-  printf("[ INFO ]: incoming string=%s\n", buf);
+  printf("[ INFO ]: size of set_ptr=%lu\n", sizeof(*set_ptr));
 
   for (int i = 0; i < strlen(buf); i++) {
     if (buf[i] == delimiter || buf[i] == '\n' || buf[i] == '\0') {
@@ -120,6 +154,7 @@ TokenizedString *string_tokenizer_delim(char delimiter, char *buf) {
 
       size_by++;
       set_ptr[current_str_pos][i] = '\0';
+
       char (*tmp_set_ptr)[BUFFER_SIZE] =
           realloc(set_ptr, sizeof(*set_ptr) * size_by);
 
@@ -128,7 +163,7 @@ TokenizedString *string_tokenizer_delim(char delimiter, char *buf) {
         exit(1);
       }
 
-      tmp_set_ptr = set_ptr;
+      set_ptr = tmp_set_ptr;
       base = i + 1;
       current_str_pos++;
     }
@@ -222,7 +257,7 @@ TokenizedString *string_tokenizer(char *buf) {
 
   size_t current_str_pos = 0;
   size_t base = 0;
-  size_t size_by = 2;
+  size_t size_by = 1;
   char (*set_ptr)[BUFFER_SIZE] = malloc(sizeof(*set_ptr));
 
   printf("[ INFO ]: incoming string=%s\n", buf);
@@ -235,6 +270,7 @@ TokenizedString *string_tokenizer(char *buf) {
         set_ptr[current_str_pos][j] = buf[base + j];
       }
 
+      size_by++;
       set_ptr[current_str_pos][i] = '\0';
       char (*tmp_set_ptr)[BUFFER_SIZE] =
           realloc(set_ptr, sizeof(*set_ptr) * size_by);
@@ -243,9 +279,8 @@ TokenizedString *string_tokenizer(char *buf) {
         perror("[ ERROR ]: Unable to reallocate for string's size");
         exit(1);
       }
-      tmp_set_ptr = set_ptr;
+      set_ptr = tmp_set_ptr;
 
-      size_by++;
       base = i + 1;
       current_str_pos++;
     }
