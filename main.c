@@ -19,26 +19,33 @@ typedef struct {
 int buffer_whitespace_count(char *buf);
 TokenizedString *string_tokenizer(char *buf);
 char *read_bin_path(char delimiter, char *path_buf, size_t *size);
-// index is used to keep track of the size of the allocated memory for the file
-// buffer
-char *read_file(FILE *file_ptr, size_t *size);
+
+// returns each line of the file;
+TokenizedString *read_file(FILE *file_ptr);
 
 int main() {
   printf("starting git-tui\n");
   char input_buffer[BUFFER_SIZE];
   char bin_cmd[] = "gago\n";
 
-  // printf("RC FILE PATH %s\n", RC_FILE_PATH);
-  // FILE *zdrc = fopen(RC_FILE_PATH, "r");
-  //
-  // if (zdrc == NULL) {
-  //   perror("[ ERROR ]: Unable to open file");
-  //   return 1;
-  // }
-  //
-  // size_t file_buf_size = 0;
-  // char *file_buf = read_file(zdrc, &file_buf_size);
-  //
+  printf("RC FILE PATH %s\n", RC_FILE_PATH);
+  FILE *zdrc = fopen(RC_FILE_PATH, "r");
+
+  if (zdrc == NULL) {
+    perror("[ ERROR ]: Unable to open file");
+    return 1;
+  }
+
+  TokenizedString *tokenized_file_buf = read_file(zdrc);
+
+  printf("[ TEST ]: LINE COUNT: %lu\n", tokenized_file_buf->len);
+  for (int i = 0; i < tokenized_file_buf->len; i++) {
+    printf("[ INFO ]: FILE CONTENTS [%d] \n%s", i, tokenized_file_buf->data[i]);
+  }
+
+  free(tokenized_file_buf->data);
+  free(tokenized_file_buf);
+  return 0;
   // size_t paths_buf_size = 0;
   // char *paths_buf = read_bin_path(':', file_buf, &paths_buf_size);
   //
@@ -140,33 +147,30 @@ char *read_bin_path(char delimiter, char *path_buf, size_t *size) {
 index) to get each string in the array.
 
  */
-char *read_file(FILE *file_ptr, size_t *size) {
+TokenizedString *read_file(FILE *file_ptr) {
 
   size_t line_capp = 0;
   int line_count = 0;
   int size_by = 1; // increment to multiply by current size
   char *file_buf = NULL;
-  char *ptr_str_tmp = (char *)malloc(sizeof(char) * BUFFER_SIZE);
+  char (*ptr_str_tmp)[BUFFER_SIZE] = malloc(sizeof(*ptr_str_tmp));
   // dynamically reallocate for every new line
   while (getline(&file_buf, &line_capp, file_ptr) != EOF) {
     if (*file_buf == '\n')
       continue;
     int cur_str_size = strlen(file_buf);
     for (int i = 0; i < cur_str_size; i++) {
-      *(ptr_str_tmp + sizeof(char) * (BUFFER_SIZE * line_count + i)) =
-          file_buf[i];
+      ptr_str_tmp[line_count][i] = file_buf[i];
     }
-    char *p =
-        (ptr_str_tmp + sizeof(char) * (BUFFER_SIZE * line_count)); // access
 
     line_count++;
     size_by++;
 
     // add n times more memory size for every new line that has contents
-    char *tmp = (char *)realloc(
-        ptr_str_tmp,
-        sizeof(char) * BUFFER_SIZE *
-            size_by); // need to add since line_count starts at 0
+    char (*tmp)[BUFFER_SIZE] =
+        realloc(ptr_str_tmp,
+                sizeof(*ptr_str_tmp) *
+                    size_by); // need to add since line_count starts at 0
 
     if (tmp == NULL) {
       perror("[ ERROR ]: Unable to reallocate new memory for buffer");
@@ -174,14 +178,15 @@ char *read_file(FILE *file_ptr, size_t *size) {
     }
     ptr_str_tmp = tmp;
   };
-  *size += line_count * BUFFER_SIZE * sizeof(char);
-  printf("[ TEST ]: LINE COUNT: %d\n", line_count);
-  for (int i = 0; i < line_count; i++) {
-    printf("[ INFO ]: FILE CONTENTS [%i] \n%s", i,
-           (ptr_str_tmp + i * BUFFER_SIZE));
-  }
+
+  TokenizedString *tokenized_file =
+      malloc(sizeof(TokenizedString) + sizeof(*ptr_str_tmp));
+
+  tokenized_file->data = ptr_str_tmp;
+  tokenized_file->len = line_count;
+
   free(file_buf);
-  return ptr_str_tmp;
+  return tokenized_file;
 }
 int buffer_whitespace_count(char *buf) {
   int counter = 0;
@@ -231,7 +236,7 @@ TokenizedString *string_tokenizer(char *buf) {
       }
       tmp_set_ptr = set_ptr;
 
-			size_by++;
+      size_by++;
       base = i + 1;
       current_str_pos++;
     }
