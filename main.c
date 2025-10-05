@@ -10,17 +10,10 @@
 #define MAX_INPUTS 20 // determined by white spaces from user query
 #define RC_FILE_PATH ".zdrc"
 
-
-typedef struct {
-
-	char *data;
-	char **str;
-	size_t str_len;
-
-} String;
+typedef char String[BUFFER_SIZE];
 
 int buffer_whitespace_count(char *buf);
-char *string_tokenizer(char *buf);
+String *string_tokenizer(char *buf);
 char *read_bin_path(char delimiter, char *path_buf, size_t *size);
 // index is used to keep track of the size of the allocated memory for the file
 // buffer
@@ -200,10 +193,11 @@ int buffer_whitespace_count(char *buf) {
 
 // Reads the whole buffer input of the user
 // accessing each input needs to be offset by BUFFER_SIZE
-char *string_tokenizer(char *buf) {
+String *string_tokenizer(char *buf) {
 
   char *ptr = buf;
-  char *p_tmp_buf = (char *)malloc((MAX_INPUTS * BUFFER_SIZE) * sizeof(char));
+  String *p_tmp_buf = (String *)malloc(sizeof(String));
+	p_tmp_buf[1];
   if (p_tmp_buf == NULL) {
     return NULL;
   }
