@@ -17,11 +17,10 @@ typedef struct {
 } TokenizedString;
 
 int buffer_whitespace_count(char *buf);
+char substring(char *buf);
 TokenizedString *string_tokenizer(char *buf);
-char *read_bin_path(char delimiter, char *path_buf, size_t *size);
-
-// returns each line of the file;
-TokenizedString *read_file(FILE *file_ptr);
+TokenizedString *string_tokenizer_delim(char delimiter, char *path_buf);
+TokenizedString *tokenized_file(FILE *file_ptr);
 
 int main() {
   printf("starting git-tui\n");
@@ -36,32 +35,29 @@ int main() {
     return 1;
   }
 
-  TokenizedString *tokenized_file_buf = read_file(zdrc);
+  TokenizedString *tokenized_file_buf = tokenized_file(zdrc);
 
   printf("[ TEST ]: LINE COUNT: %lu\n", tokenized_file_buf->len);
   for (int i = 0; i < tokenized_file_buf->len; i++) {
     printf("[ INFO ]: FILE CONTENTS [%d] \n%s", i, tokenized_file_buf->data[i]);
   }
 
+  printf("[ TEST ]: size of file buffer=%lu\n", tokenized_file_buf->len);
+  // // TODO: create enum if want to extend the config file... idk
+  for (int i = 0; i < tokenized_file_buf->len; i++) {
+    char *paths = tokenized_file_buf->data[i];
+    int cmp_result = strncmp(paths, "PATH=", 5);
+    if (cmp_result == 0) {
+      printf("[ INFO ]: PATH exists\n");
+      printf("[ INFO ]: PATH CONTENTS \n%s", paths);
+      TokenizedString *tokenized_paths = string_tokenizer_delim(':', paths);
+      return 0;
+    }
+  }
   free(tokenized_file_buf->data);
   free(tokenized_file_buf);
   return 0;
-  // size_t paths_buf_size = 0;
-  // char *paths_buf = read_bin_path(':', file_buf, &paths_buf_size);
-  //
-  // printf("[ TEST ]: size of file buffer=%lu\n", file_buf_size);
-  //
-  // // TODO: create enum if want to extend the config file... idk
-  //
-  // for (int i = 0; i < file_buf_size; i++) {
-  //   char *current_str = (file_buf + BUFFER_SIZE * i);
-  //   int cmp_result = strncmp(current_str, "PATH", 4);
-  //   if (cmp_result == 0) {
-  //     printf("[ INFO ]: PATH exists\n");
-  //     return 0;
-  //   }
-  // }
-  // printf("[ ERROR ]: PATH does not exists");
+  printf("[ ERROR ]: PATH does not exists");
   printf("~>");
 
   while (fgets(input_buffer, BUFFER_SIZE, stdin) != NULL) {
@@ -100,43 +96,56 @@ int main() {
 
 // - return: a pointer to a character which should be accessed by (BUFFER_SIZE *
 // index) to get each string in the array.
-char *read_bin_path(char delimiter, char *path_buf, size_t *size) {
+TokenizedString *string_tokenizer_delim(char delimiter, char *buf) {
 
-  char *paths = (char *)malloc(sizeof(char) * BUFFER_SIZE);
-  if (paths == NULL) {
-    perror("[ ERROR ]: Unable to allocate memory for paths ");
-    exit(1);
+  TokenizedString *tokenized_str = malloc(sizeof(TokenizedString));
+  if (tokenized_str == NULL) {
+    return NULL;
   }
-  int base = 0;
-  int size_by = 1;
-  int line_count = 0;
-  for (int i = 5; i < BUFFER_SIZE; i++) {
-    char *current_ch = (path_buf + sizeof(char) * i);
-    if (*current_ch == delimiter || *current_ch == '\n') {
 
-      char *tmp_realloc = (char *)realloc(paths, BUFFER_SIZE * size_by);
+  size_t current_str_pos = 0;
+  size_t base = 0;
+  size_t size_by = 1;
+  char (*set_ptr)[BUFFER_SIZE] = malloc(sizeof(*set_ptr));
 
-      if (tmp_realloc == NULL) {
-        perror("[ ERROR ]: Unable to reallocate new memory for buffer");
-        free(paths);
+  printf("[ INFO ]: incoming string=%s\n", buf);
+
+  for (int i = 0; i < strlen(buf); i++) {
+    if (buf[i] == delimiter || buf[i] == '\n' || buf[i] == '\0') {
+
+      int cur_str_size = i - base;
+      for (int j = 0; j < cur_str_size; j++) {
+        set_ptr[current_str_pos][j] = buf[base + j];
+      }
+
+      size_by++;
+      set_ptr[current_str_pos][i] = '\0';
+      char (*tmp_set_ptr)[BUFFER_SIZE] =
+          realloc(set_ptr, sizeof(*set_ptr) * size_by);
+
+      if (tmp_set_ptr == NULL) {
+        perror("[ ERROR ]: Unable to reallocate for string's size");
         exit(1);
       }
 
-      paths = tmp_realloc;
-
-      int index = sizeof(char) * i; // no need to miltiply over and over again
-      for (int j = base; j < i; j++) {
-        *(paths + index + j) = *(path_buf + (sizeof(char) * j));
-      }
-
-      *(paths + index + i) = '\0'; // replace ':' with '\0'
-      base = i;
-      line_count++;
+      tmp_set_ptr = set_ptr;
+      base = i + 1;
+      current_str_pos++;
     }
   }
 
-  *size += line_count * BUFFER_SIZE * sizeof(char);
-  return paths;
+  TokenizedString *tmp_token =
+      realloc(tokenized_str, sizeof(TokenizedString) + sizeof(*set_ptr));
+  tokenized_str = tmp_token;
+  tokenized_str->data = set_ptr;
+  tokenized_str->len = current_str_pos;
+
+  if (tmp_token == NULL) {
+    perror("[ ERROR ]: Unable to reallocate for string's size");
+    exit(1);
+  }
+
+  return tokenized_str;
 }
 
 /*
@@ -147,7 +156,7 @@ char *read_bin_path(char delimiter, char *path_buf, size_t *size) {
 index) to get each string in the array.
 
  */
-TokenizedString *read_file(FILE *file_ptr) {
+TokenizedString *tokenized_file(FILE *file_ptr) {
 
   size_t line_capp = 0;
   int line_count = 0;
