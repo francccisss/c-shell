@@ -10,10 +10,14 @@
 #define MAX_INPUTS 20 // determined by white spaces from user query
 #define RC_FILE_PATH ".zdrc"
 
-typedef char String[BUFFER_SIZE];
+typedef struct {
+  char (*data)[BUFFER_SIZE];
+  size_t len;
+
+} TokenizedString;
 
 int buffer_whitespace_count(char *buf);
-String *string_tokenizer(char *buf);
+TokenizedString *string_tokenizer(char *buf);
 char *read_bin_path(char delimiter, char *path_buf, size_t *size);
 // index is used to keep track of the size of the allocated memory for the file
 // buffer
@@ -24,34 +28,33 @@ int main() {
   char input_buffer[BUFFER_SIZE];
   char bin_cmd[] = "gago\n";
 
-  printf("RC FILE PATH %s\n", RC_FILE_PATH);
-  FILE *zdrc = fopen(RC_FILE_PATH, "r");
-
-  if (zdrc == NULL) {
-    perror("[ ERROR ]: Unable to open file");
-    return 1;
-  }
-
-  size_t file_buf_size = 0;
-  char *file_buf = read_file(zdrc, &file_buf_size);
-
-  size_t paths_buf_size = 0;
-  char *paths_buf = read_bin_path(':', file_buf, &paths_buf_size);
-
-  printf("[ TEST ]: size of file buffer=%lu\n", file_buf_size);
-
-  // TODO: create enum if want to extend the config file... idk
-
-  for (int i = 0; i < file_buf_size; i++) {
-    char *current_str = (file_buf + BUFFER_SIZE * i);
-    int cmp_result = strncmp(current_str, "PATH", 4);
-    if (cmp_result == 0) {
-      printf("[ INFO ]: PATH exists\n");
-      return 0;
-    }
-  }
-  printf("[ ERROR ]: PATH does not exists");
-  return 1;
+  // printf("RC FILE PATH %s\n", RC_FILE_PATH);
+  // FILE *zdrc = fopen(RC_FILE_PATH, "r");
+  //
+  // if (zdrc == NULL) {
+  //   perror("[ ERROR ]: Unable to open file");
+  //   return 1;
+  // }
+  //
+  // size_t file_buf_size = 0;
+  // char *file_buf = read_file(zdrc, &file_buf_size);
+  //
+  // size_t paths_buf_size = 0;
+  // char *paths_buf = read_bin_path(':', file_buf, &paths_buf_size);
+  //
+  // printf("[ TEST ]: size of file buffer=%lu\n", file_buf_size);
+  //
+  // // TODO: create enum if want to extend the config file... idk
+  //
+  // for (int i = 0; i < file_buf_size; i++) {
+  //   char *current_str = (file_buf + BUFFER_SIZE * i);
+  //   int cmp_result = strncmp(current_str, "PATH", 4);
+  //   if (cmp_result == 0) {
+  //     printf("[ INFO ]: PATH exists\n");
+  //     return 0;
+  //   }
+  // }
+  // printf("[ ERROR ]: PATH does not exists");
   printf("~>");
 
   while (fgets(input_buffer, BUFFER_SIZE, stdin) != NULL) {
@@ -64,13 +67,15 @@ int main() {
              MAX_INPUTS);
       return 1;
     }
-    char *str_arr = string_tokenizer(input_buffer);
 
-    if (str_arr == NULL) {
-      printf("[ ERROR ]: Pointer returned null");
-      free(str_arr);
-      exit(1);
-    };
+    // used for executing a new process
+    TokenizedString *tokened_input = string_tokenizer(input_buffer);
+
+    printf("[ TEST ]: Buffer Array\n");
+    for (int i = 0; i < tokened_input->len; i++) {
+      printf("[ TEST ]: Buff[%d]='%s'\n", i, tokened_input->data[i]);
+    }
+    printf("[ TEST ]: Length of tokens: %lu ", tokened_input->len);
 
     int res = strcmp(input_buffer, bin_cmd);
 
@@ -81,7 +86,8 @@ int main() {
     }
     printf("[ INFO ]: Current size of buffer=%lu\n", strlen(input_buffer));
     printf("~>");
-    free(str_arr);
+    free(tokened_input->data);
+    free(tokened_input);
   };
 }
 
@@ -193,54 +199,54 @@ int buffer_whitespace_count(char *buf) {
 
 // Reads the whole buffer input of the user
 // accessing each input needs to be offset by BUFFER_SIZE
-String *string_tokenizer(char *buf) {
+TokenizedString *string_tokenizer(char *buf) {
 
-  char *ptr = buf;
-  String *p_tmp_buf = (String *)malloc(sizeof(String));
-	p_tmp_buf[1];
-  if (p_tmp_buf == NULL) {
+  TokenizedString *tokenized_str = malloc(sizeof(TokenizedString));
+  if (tokenized_str == NULL) {
     return NULL;
   }
-  // the outer array
+
   size_t current_str_pos = 0;
-  // starting of new string_tokenizering separated by space is base
   size_t base = 0;
+  size_t size_by = 2;
+  char (*set_ptr)[BUFFER_SIZE] = malloc(sizeof(*set_ptr));
 
   printf("[ INFO ]: incoming string=%s\n", buf);
+
   for (int i = 0; i < strlen(buf); i++) {
     if (buf[i] == ' ' || buf[i] == '\n' || buf[i] == '\0') {
 
-      // iterate up to i where i is a runner pointer of the buf string
       int cur_str_size = i - base;
-
-      // extract from base to i
-      for (int k = 0; k < cur_str_size; k++) {
-        // dereferncing every k-th elementh within the allcoated heap
-        *(p_tmp_buf + sizeof(char) * (BUFFER_SIZE * current_str_pos + k)) =
-            *(ptr + base + k);
-        // tmp_buf[current_str_pos][k] =
-        // from buffer base + k offset
+      for (int j = 0; j < cur_str_size; j++) {
+        set_ptr[current_str_pos][j] = buf[base + j];
       }
 
-      // append null terminator else it does not guarantee a 0 byte value
-      // within the occupied space
-      *(p_tmp_buf + sizeof(char) * (BUFFER_SIZE * cur_str_size + 1)) = '\0';
+      set_ptr[current_str_pos][i] = '\0';
+      char (*tmp_set_ptr)[BUFFER_SIZE] =
+          realloc(set_ptr, sizeof(*set_ptr) * size_by);
 
+      if (tmp_set_ptr == NULL) {
+        perror("[ ERROR ]: Unable to reallocate for string's size");
+        exit(1);
+      }
+      tmp_set_ptr = set_ptr;
+
+			size_by++;
       base = i + 1;
       current_str_pos++;
     }
   }
-  printf("[ TEST ]: Buffer Array\n");
-  for (int i = 0; i < 10; i++) {
-    printf("[ TEST ]: Buff[%d]='%s'\n", i,
-           (p_tmp_buf + sizeof(char) * (BUFFER_SIZE * i)));
-  }
-  return p_tmp_buf;
-}
 
-// file tree recurision to look for the specific command given a path to a
-// binary extract user input -> tokenize -> use first string as input for
-// recursion within the path -> if there exists a bin name === <input> then we
-// know that the it exists else just return an error after checking if it
-// exists, fork process and excec with additional parameters from the tokenized
-// user input string string: <bin> ...parameters
+  TokenizedString *tmp_token =
+      realloc(tokenized_str, sizeof(TokenizedString) + sizeof(*set_ptr));
+  tokenized_str = tmp_token;
+  tokenized_str->data = set_ptr;
+  tokenized_str->len = current_str_pos;
+
+  if (tmp_token == NULL) {
+    perror("[ ERROR ]: Unable to reallocate for string's size");
+    exit(1);
+  }
+
+  return tokenized_str;
+}
